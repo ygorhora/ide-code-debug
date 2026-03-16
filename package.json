@@ -1,0 +1,88 @@
+{
+  "name": "ide-code-debug",
+  "displayName": "IDE Code Debug Bridge",
+  "description": "MCP bridge between AI CLI tools (Claude Code) and the VS Code debugger — set breakpoints, control execution, inspect variables, all from your terminal.",
+  "version": "0.1.0",
+  "publisher": "ygorhora",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Debuggers",
+    "Other"
+  ],
+  "keywords": [
+    "debug",
+    "mcp",
+    "claude",
+    "ai",
+    "bridge"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ideCodeDebug.startServer",
+        "title": "IDE Code Debug: Start MCP Server"
+      },
+      {
+        "command": "ideCodeDebug.stopServer",
+        "title": "IDE Code Debug: Stop MCP Server"
+      },
+      {
+        "command": "ideCodeDebug.toggleServer",
+        "title": "IDE Code Debug: Toggle MCP Server"
+      }
+    ],
+    "configuration": {
+      "title": "IDE Code Debug Bridge",
+      "properties": {
+        "ideCodeDebug.port": {
+          "type": "number",
+          "default": 3100,
+          "description": "Starting port for the MCP server (localhost only)"
+        },
+        "ideCodeDebug.portRange": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Number of ports to try starting from the base port. Set to 1 to disable auto-scanning."
+        },
+        "ideCodeDebug.portRetries": {
+          "type": "number",
+          "default": 3,
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Number of retry attempts per port before moving to the next one"
+        },
+        "ideCodeDebug.autoStart": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically start the MCP server when VS Code opens"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "node esbuild.js --production",
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.5.0"
+  }
+}
