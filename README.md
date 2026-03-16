@@ -2,6 +2,8 @@
   <img src="assets/icon.png" alt="IDE Code Debug Bridge" width="128" height="128">
 </p>
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 # IDE Code Debug Bridge
 
 **Give your AI the power to debug like a human — visually, in real time, inside your IDE.**
@@ -351,4 +353,6 @@ This extension exposes powerful debugger capabilities over HTTP. Understanding t
 
 ## License
 
-MIT
+This project is licensed under the [MIT License](LICENSE).
+
+Copyright (c) 2025 Ygor Hora and Contributors.
