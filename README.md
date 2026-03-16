@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon.png" alt="IDE Code Debug Bridge" width="128" height="128">
+</p>
+
 # IDE Code Debug Bridge
 
 **Give your AI the power to debug like a human — visually, in real time, inside your IDE.**
