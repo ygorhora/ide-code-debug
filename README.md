@@ -219,6 +219,7 @@ The debugger only pauses when `order_id` is the specific value you're investigat
 | `ideCodeDebug.portRange` | `10` | Number of ports to scan from the base port. Set to `1` to disable auto-scanning. |
 | `ideCodeDebug.portRetries` | `3` | Retry attempts per port before moving to the next one |
 | `ideCodeDebug.maxRequestBodyMB` | `1` | Maximum request body size in MB. Protects the extension host from oversized payloads. |
+| `ideCodeDebug.allowedPaths` | `[]` | Glob patterns restricting which files MCP tools can access. Empty = no restriction. |
 | `ideCodeDebug.autoStart` | `true` | Auto-start the server when the editor opens |
 
 ### Multiple editor windows
@@ -239,6 +240,21 @@ To point your MCP client at a specific window, use the port shown in that window
 ```
 
 > **Tip:** If you always use a single window, set `portRange: 1` to skip scanning.
+
+### File path restriction
+
+By default, all files accessible to VS Code can be read via MCP tools (`find_code_line`, `set_breakpoints`, `remove_breakpoints`). To restrict access to specific directories, configure `allowedPaths` with glob patterns:
+
+```json
+"ideCodeDebug.allowedPaths": [
+  "/home/me/projects/**",
+  "/tmp/**"
+]
+```
+
+When set, any tool call targeting a file outside these patterns will be rejected with a clear error message. Changes to this setting take effect immediately — no restart needed.
+
+> **Tip:** Leave empty (default) for unrestricted access on single-user machines. Use glob patterns on shared machines or when you want to prevent the AI from reading files outside your project.
 
 Commands (via Command Palette):
 
@@ -291,6 +307,41 @@ src/
 - VS Code 1.85+ or Cursor
 - An MCP-compatible client (Claude Code, or any client supporting Streamable HTTP transport)
 - A debug adapter for your language (Python: debugpy, Node.js: pwa-node, etc.)
+
+---
+
+## Security
+
+This extension exposes powerful debugger capabilities over HTTP. Understanding the security model helps you use it safely.
+
+### How it's protected
+
+- **Localhost only**: The MCP server binds exclusively to `127.0.0.1` — it is **not reachable from the network**. Only processes running on your machine can connect.
+- **Request size limits**: All incoming requests are capped at a configurable size (`maxRequestBodyMB`, default 1 MB) to protect the extension host from oversized payloads.
+- **Session limits**: A maximum of 10 concurrent MCP sessions, with idle sessions automatically reaped after 5 minutes.
+- **File path restriction**: Optionally restrict which files the MCP tools can access via `allowedPaths` glob patterns.
+
+### What to be aware of
+
+- **No authentication**: Any process on your local machine can connect to the MCP server and control the debugger. This follows the same model as VS Code's own Debug Adapter Protocol (DAP), which also runs on localhost without authentication.
+- **Expression evaluation**: The `evaluate` tool can run arbitrary expressions in the context of the program being debugged. This is the same as typing in the VS Code Debug Console — it's powerful by design, but means the AI can execute code within the debuggee process.
+- **Variable inspection**: The `get_variables` tool returns all in-scope variables, which may include sensitive values (API keys, tokens, credentials) that your application has in memory at runtime.
+- **File reading**: The `find_code_line` tool can read the contents of any file accessible to VS Code (unless restricted by `allowedPaths`).
+
+### Best practices
+
+1. **Use `allowedPaths` on shared machines**: If you're on a multi-user system or want to limit file access, configure glob patterns to restrict the AI to your project directories:
+   ```json
+   "ideCodeDebug.allowedPaths": ["/home/me/projects/**"]
+   ```
+
+2. **Be mindful of secrets in debug sessions**: When debugging applications that handle credentials, database connections, or API keys, remember that the AI can see these values through `get_variables` and `evaluate`. This is inherent to debugging — the same values are visible in VS Code's Variables panel.
+
+3. **Don't debug production processes**: This extension is designed for local development. Never attach it to a production process or expose the MCP port beyond localhost.
+
+4. **Review launch configurations**: The `get_launch_configs` tool exposes your `.vscode/launch.json` contents, which may include environment variables. Avoid storing production secrets in launch configurations.
+
+5. **Keep the extension updated**: As with any tool that handles code execution, use the latest version to benefit from security improvements.
 
 ---
 
