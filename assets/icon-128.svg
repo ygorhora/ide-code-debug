@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="128" height="128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <linearGradient id="bridge" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e94560"/>
+      <stop offset="50%" style="stop-color:#ff6b6b"/>
+      <stop offset="100%" style="stop-color:#e94560"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#e94560;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#e94560;stop-opacity:0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect x="8" y="8" width="240" height="240" rx="48" ry="48" fill="url(#bg)"/>
+
+  <!-- Bridge arch -->
+  <path d="M 48 160 Q 128 60 208 160" fill="none" stroke="url(#bridge)" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- Bridge pillars -->
+  <line x1="72" y1="132" x2="72" y2="185" stroke="#e94560" stroke-width="6" stroke-linecap="round"/>
+  <line x1="184" y1="132" x2="184" y2="185" stroke="#e94560" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Bridge deck -->
+  <line x1="48" y1="185" x2="208" y2="185" stroke="#e94560" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Bridge cables -->
+  <line x1="96" y1="116" x2="96" y2="185" stroke="#e94560" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+  <line x1="128" y1="100" x2="128" y2="185" stroke="#e94560" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+  <line x1="160" y1="116" x2="160" y2="185" stroke="#e94560" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Left side: Code brackets (IDE) -->
+  <text x="56" y="220" font-family="monospace" font-size="30" font-weight="bold" fill="#4fc3f7" opacity="0.9">&lt;/&gt;</text>
+
+  <!-- Right side: Debug breakpoint dot -->
+  <circle cx="188" cy="212" r="12" fill="#e94560"/>
+  <circle cx="188" cy="212" r="6" fill="#ff6b6b"/>
+
+  <!-- Top glow effect -->
+  <ellipse cx="128" cy="85" rx="60" ry="20" fill="url(#glow)"/>
+</svg>
