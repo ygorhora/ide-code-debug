@@ -5,6 +5,10 @@
   "version": "0.1.0",
   "publisher": "ygorhora",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ygorhora/ide-code-debug"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
