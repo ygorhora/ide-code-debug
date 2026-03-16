@@ -67,6 +67,14 @@
           "maximum": 50,
           "description": "Maximum allowed request body size in megabytes. Protects the extension host from oversized payloads."
         },
+        "ideCodeDebug.allowedPaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Glob patterns restricting which files the MCP tools can access (e.g. [\"/home/me/projects/**\", \"/tmp/**\"]). Empty means no restriction — all files accessible to VS Code are allowed."
+        },
         "ideCodeDebug.autoStart": {
           "type": "boolean",
           "default": true,
@@ -83,10 +91,12 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
+    "picomatch": "^4.0.3",
     "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/picomatch": "^4.0.2",
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^3.0.0",
     "esbuild": "^0.24.0",

@@ -1,5 +1,7 @@
+import * as path from "path";
 import * as vscode from "vscode";
 import { EventEmitter } from "events";
+import picomatch from "picomatch";
 
 export interface StoppedEvent {
   threadId: number;
@@ -38,6 +40,7 @@ interface SessionState {
 
 export class DebugBridge extends EventEmitter {
   private sessions = new Map<string, SessionState>();
+  private pathMatcher: ((file: string) => boolean) | null = null;
 
   constructor(
     context: vscode.ExtensionContext,
@@ -75,6 +78,45 @@ export class DebugBridge extends EventEmitter {
         this.emit("terminated", session.id);
       })
     );
+
+    this.loadAllowedPaths();
+
+    // Reload allowed paths when settings change
+    context.subscriptions.push(
+      vscode.workspace.onDidChangeConfiguration((e) => {
+        if (e.affectsConfiguration("ideCodeDebug.allowedPaths")) {
+          this.loadAllowedPaths();
+        }
+      })
+    );
+  }
+
+  private loadAllowedPaths() {
+    const patterns = vscode.workspace
+      .getConfiguration("ideCodeDebug")
+      .get<string[]>("allowedPaths", []);
+
+    if (patterns.length === 0) {
+      this.pathMatcher = null;
+      this.log.appendLine("[security] File path restriction: disabled (all files allowed)");
+    } else {
+      this.pathMatcher = picomatch(patterns);
+      this.log.appendLine(
+        `[security] File path restriction: ${patterns.join(", ")}`
+      );
+    }
+  }
+
+  assertPathAllowed(file: string): void {
+    if (!this.pathMatcher) return;
+
+    const resolved = path.resolve(file);
+    if (!this.pathMatcher(resolved)) {
+      throw new Error(
+        `Access denied: "${resolved}" is outside the allowed paths. ` +
+        `Configure ideCodeDebug.allowedPaths in VS Code settings to adjust.`
+      );
+    }
   }
 
   private createTracker(
@@ -326,6 +368,7 @@ export class DebugBridge extends EventEmitter {
     lines: number[],
     condition?: string
   ): { file: string; lines: number[] } {
+    this.assertPathAllowed(file);
     const uri = vscode.Uri.file(file);
     const breakpoints = lines.map(
       (line) =>
@@ -340,6 +383,7 @@ export class DebugBridge extends EventEmitter {
   }
 
   removeBreakpoints(file: string, lines?: number[]): number {
+    this.assertPathAllowed(file);
     const toRemove = vscode.debug.breakpoints.filter((bp) => {
       if (!(bp instanceof vscode.SourceBreakpoint)) return false;
       if (bp.location.uri.fsPath !== file) return false;
@@ -380,6 +424,7 @@ export class DebugBridge extends EventEmitter {
     file: string,
     pattern: string
   ): Promise<Array<{ line: number; text: string }>> {
+    this.assertPathAllowed(file);
     const doc = await vscode.workspace.openTextDocument(
       vscode.Uri.file(file)
     );
