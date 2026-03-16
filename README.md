@@ -218,6 +218,7 @@ The debugger only pauses when `order_id` is the specific value you're investigat
 | `ideCodeDebug.port` | `3100` | Starting port for the MCP server (localhost only) |
 | `ideCodeDebug.portRange` | `10` | Number of ports to scan from the base port. Set to `1` to disable auto-scanning. |
 | `ideCodeDebug.portRetries` | `3` | Retry attempts per port before moving to the next one |
+| `ideCodeDebug.maxRequestBodyMB` | `1` | Maximum request body size in MB. Protects the extension host from oversized payloads. |
 | `ideCodeDebug.autoStart` | `true` | Auto-start the server when the editor opens |
 
 ### Multiple editor windows

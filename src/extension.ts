@@ -59,13 +59,14 @@ async function startServer(
   const basePort = config.get<number>("port", 3100);
   const portRange = config.get<number>("portRange", 10);
   const retries = config.get<number>("portRetries", 3);
+  const maxRequestBodyMB = config.get<number>("maxRequestBodyMB", 1);
 
   for (let portOffset = 0; portOffset < portRange; portOffset++) {
     const port = basePort + portOffset;
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        mcpServer = new McpDebugServer(bridge, log);
+        mcpServer = new McpDebugServer(bridge, log, { maxRequestBodyMB });
         await mcpServer.start(port);
 
         statusBarItem.text = `$(debug) Debug Bridge :${port}`;

@@ -27,15 +27,23 @@ interface ManagedSession {
   lastActivity: number;
 }
 
+export interface McpServerOptions {
+  maxRequestBodyMB: number;
+}
+
 export class McpDebugServer {
   private httpServer: http.Server | null = null;
   private sessions = new Map<string, ManagedSession>();
   private reaperInterval: ReturnType<typeof setInterval> | null = null;
+  private maxBodyBytes: number;
 
   constructor(
     private bridge: DebugBridge,
-    private log: OutputChannel
-  ) {}
+    private log: OutputChannel,
+    options?: McpServerOptions
+  ) {
+    this.maxBodyBytes = Math.round((options?.maxRequestBodyMB ?? 1) * 1024 * 1024);
+  }
 
   /** Create a fresh McpServer with all tools registered */
   private createMcpServer(): McpServer {
@@ -376,7 +384,28 @@ export class McpDebugServer {
     res: http.ServerResponse
   ) {
     // Pre-parse body so we can inspect it before routing
-    const body = req.method === "POST" ? await readBody(req) : undefined;
+    let body: any;
+    if (req.method === "POST") {
+      try {
+        body = await readBody(req, this.maxBodyBytes);
+      } catch (err: any) {
+        const isBodyTooLarge = err.message?.includes("too large");
+        const status = isBodyTooLarge ? 413 : 400;
+        const limitMB = (this.maxBodyBytes / 1024 / 1024).toFixed(1);
+        const message = isBodyTooLarge
+          ? `Request body exceeds the ${limitMB} MB limit. You can increase this in VS Code settings: ideCodeDebug.maxRequestBodyMB`
+          : `Invalid request body: ${err.message}`;
+
+        this.log.appendLine(`[mcp] ${message}`);
+        res.writeHead(status, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({
+          jsonrpc: "2.0",
+          error: { code: isBodyTooLarge ? -32001 : -32700, message },
+          id: null,
+        }));
+        return;
+      }
+    }
 
     if (isInitializeRequest(body)) {
       if (this.sessions.size >= MAX_SESSIONS) {
@@ -492,10 +521,19 @@ function ok(data: any) {
   };
 }
 
-function readBody(req: http.IncomingMessage): Promise<any> {
+function readBody(req: http.IncomingMessage, maxBytes: number): Promise<any> {
   return new Promise((resolve, reject) => {
+    let size = 0;
     const chunks: Buffer[] = [];
-    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    req.on("data", (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > maxBytes) {
+        req.destroy();
+        reject(new Error("Request body too large"));
+        return;
+      }
+      chunks.push(chunk);
+    });
     req.on("end", () => {
       try {
         const raw = Buffer.concat(chunks).toString("utf-8");

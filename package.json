@@ -60,6 +60,13 @@
           "maximum": 10,
           "description": "Number of retry attempts per port before moving to the next one"
         },
+        "ideCodeDebug.maxRequestBodyMB": {
+          "type": "number",
+          "default": 1,
+          "minimum": 0.1,
+          "maximum": 50,
+          "description": "Maximum allowed request body size in megabytes. Protects the extension host from oversized payloads."
+        },
         "ideCodeDebug.autoStart": {
           "type": "boolean",
           "default": true,
