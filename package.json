@@ -19,6 +19,7 @@
     "ai",
     "bridge"
   ],
+  "icon": "assets/icon.png",
   "activationEvents": [
     "onStartupFinished"
   ],
