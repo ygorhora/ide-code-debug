@@ -2,7 +2,7 @@
   "name": "ide-code-debug",
   "displayName": "IDE Code Debug Bridge",
   "description": "MCP bridge between AI CLI tools (Claude Code) and the VS Code debugger — set breakpoints, control execution, inspect variables, all from your terminal.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "ygorhora",
   "license": "MIT",
   "repository": {
