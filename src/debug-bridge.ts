@@ -274,14 +274,35 @@ export class DebugBridge extends EventEmitter {
     }));
   }
 
+  // ─── Workspace Info ──────────────────────────────────────
+
+  hasWorkspaceFolder(name: string): boolean {
+    return (
+      vscode.workspace.workspaceFolders?.some((f) => f.name === name) ?? false
+    );
+  }
+
+  getWorkspaceFolderInfo(): Array<{ name: string; fsPath: string }> {
+    return (
+      vscode.workspace.workspaceFolders?.map((f) => ({
+        name: f.name,
+        fsPath: f.uri.fsPath,
+      })) ?? []
+    );
+  }
+
   // ─── Session Control ───────────────────────────────────────
 
-  async getLaunchConfigs(): Promise<any[]> {
+  async getLaunchConfigs(folderName?: string): Promise<any[]> {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders) return [];
 
+    const searchFolders = folderName
+      ? folders.filter((f) => f.name === folderName)
+      : folders;
+
     const configs: any[] = [];
-    for (const folder of folders) {
+    for (const folder of searchFolders) {
       const launch = vscode.workspace.getConfiguration("launch", folder.uri);
       const items = launch.get<any[]>("configurations", []);
       configs.push(
@@ -297,23 +318,41 @@ export class DebugBridge extends EventEmitter {
   }
 
   async startSession(
-    configName?: string
+    configName?: string,
+    folderName?: string
   ): Promise<{ success: boolean; message: string }> {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders?.length) {
       return { success: false, message: "No workspace folder open" };
     }
 
+    // If a folder filter is specified, only search in that folder
+    const searchFolders = folderName
+      ? folders.filter((f) => f.name === folderName)
+      : folders;
+
+    if (folderName && searchFolders.length === 0) {
+      const available = folders.map((f) => f.name).join(", ");
+      return {
+        success: false,
+        message: `Folder "${folderName}" not found. Available: ${available}`,
+      };
+    }
+
     let config: vscode.DebugConfiguration | undefined;
+    let targetFolder: vscode.WorkspaceFolder | undefined;
 
     if (configName) {
       const allNames: string[] = [];
-      for (const folder of folders) {
+      for (const folder of searchFolders) {
         const launch = vscode.workspace.getConfiguration("launch", folder.uri);
         const items = launch.get<any[]>("configurations", []);
         for (const c of items) {
           allNames.push(c.name);
-          if (c.name === configName) config = c;
+          if (c.name === configName) {
+            config = c;
+            targetFolder = folder;
+          }
         }
         if (config) break;
       }
@@ -326,8 +365,11 @@ export class DebugBridge extends EventEmitter {
       }
     }
 
+    // Use the folder where the config was found, or the filtered folder, or the first folder
+    const launchFolder = targetFolder || searchFolders[0];
+
     const started = await vscode.debug.startDebugging(
-      folders[0],
+      launchFolder,
       config || ""
     );
     return {
@@ -350,7 +392,8 @@ export class DebugBridge extends EventEmitter {
     // workbench.action.debug.restart acts on the active session,
     // so we use the session-specific restart via stop + start
     const config = session.configuration;
-    const folder = vscode.workspace.workspaceFolders?.[0];
+    const folder =
+      session.workspaceFolder || vscode.workspace.workspaceFolders?.[0];
     await vscode.debug.stopDebugging(session);
     const started = await vscode.debug.startDebugging(folder, config);
     return {
