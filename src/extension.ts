@@ -1,3 +1,5 @@
+import * as fs from "fs";
+import * as path from "path";
 import * as vscode from "vscode";
 import { DebugBridge } from "./debug-bridge";
 import { McpDebugServer } from "./mcp-server";
@@ -38,7 +40,75 @@ export function activate(context: vscode.ExtensionContext) {
       } else {
         startServer(bridge, log);
       }
-    })
+    }),
+    vscode.commands.registerCommand(
+      "ideCodeDebug.registerWithClaude",
+      async () => {
+        if (!serverPort) {
+          vscode.window.showWarningMessage(
+            "Debug Bridge is not running. Start it first."
+          );
+          return;
+        }
+        const terminal = vscode.window.createTerminal({
+          name: "Claude MCP Setup",
+        });
+        terminal.sendText(
+          `claude mcp remove --scope project ide-debug 2>/dev/null; claude mcp add --transport http --scope project ide-debug http://localhost:${serverPort}/mcp`
+        );
+        terminal.show();
+      }
+    ),
+    vscode.commands.registerCommand(
+      "ideCodeDebug.setFixedPort",
+      async () => {
+        const current = vscode.workspace
+          .getConfiguration("ideCodeDebug")
+          .get<number>("port", 3100);
+        const input = await vscode.window.showInputBox({
+          prompt: "Set a fixed MCP port for this workspace",
+          value: String(current),
+          validateInput: (v) => {
+            const n = parseInt(v);
+            if (isNaN(n) || n < 1024 || n > 65535) {
+              return "Port must be between 1024 and 65535";
+            }
+            return null;
+          },
+        });
+        if (!input) return;
+
+        const port = parseInt(input);
+        const wsConfig = vscode.workspace.getConfiguration("ideCodeDebug");
+        await wsConfig.update(
+          "port",
+          port,
+          vscode.ConfigurationTarget.Workspace
+        );
+        await wsConfig.update(
+          "portRange",
+          1,
+          vscode.ConfigurationTarget.Workspace
+        );
+
+        const action = await vscode.window.showInformationMessage(
+          `Fixed port set to ${port}. Restart Debug Bridge on this port?`,
+          "Restart",
+          "Restart & Register with Claude",
+          "Later"
+        );
+
+        if (action === "Restart" || action === "Restart & Register with Claude") {
+          await stopServer(log);
+          await startServer(bridge, log);
+        }
+        if (action === "Restart & Register with Claude") {
+          await vscode.commands.executeCommand(
+            "ideCodeDebug.registerWithClaude"
+          );
+        }
+      }
+    )
   );
 
   const config = vscode.workspace.getConfiguration("ideCodeDebug");
@@ -51,6 +121,37 @@ export function activate(context: vscode.ExtensionContext) {
 
 const RETRY_DELAY_MS = 1000;
 
+/**
+ * Read the port from .mcp.json in the workspace root, if it exists.
+ * This ensures the extension starts on the same port Claude Code expects.
+ */
+function getMcpJsonPort(log: vscode.OutputChannel): number | undefined {
+  const folders = vscode.workspace.workspaceFolders;
+  if (!folders?.length) return undefined;
+
+  for (const folder of folders) {
+    const mcpJsonPath = path.join(folder.uri.fsPath, ".mcp.json");
+    try {
+      const content = fs.readFileSync(mcpJsonPath, "utf-8");
+      const config = JSON.parse(content);
+      const ideDebug = config?.mcpServers?.["ide-debug"];
+      if (ideDebug?.url) {
+        const match = ideDebug.url.match(/localhost:(\d+)/);
+        if (match) {
+          const port = parseInt(match[1]);
+          log.appendLine(
+            `[config] Found port ${port} in ${mcpJsonPath}`
+          );
+          return port;
+        }
+      }
+    } catch {
+      // .mcp.json doesn't exist or can't be parsed — skip
+    }
+  }
+  return undefined;
+}
+
 async function startServer(
   bridge: DebugBridge,
   log: vscode.OutputChannel
@@ -61,7 +162,8 @@ async function startServer(
   }
 
   const config = vscode.workspace.getConfiguration("ideCodeDebug");
-  const basePort = config.get<number>("port", 3100);
+  const mcpJsonPort = getMcpJsonPort(log);
+  const basePort = mcpJsonPort ?? config.get<number>("port", 3100);
   const portRange = config.get<number>("portRange", 10);
   const retries = config.get<number>("portRetries", 3);
   const maxRequestBodyMB = config.get<number>("maxRequestBodyMB", 1);

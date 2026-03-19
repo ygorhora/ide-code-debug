@@ -41,6 +41,14 @@
       {
         "command": "ideCodeDebug.toggleServer",
         "title": "IDE Code Debug: Toggle MCP Server"
+      },
+      {
+        "command": "ideCodeDebug.registerWithClaude",
+        "title": "IDE Code Debug: Register with Claude Code"
+      },
+      {
+        "command": "ideCodeDebug.setFixedPort",
+        "title": "IDE Code Debug: Set Fixed Port for Workspace"
       }
     ],
     "configuration": {
