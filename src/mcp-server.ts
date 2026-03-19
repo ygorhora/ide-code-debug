@@ -5,6 +5,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { z } from "zod";
 import type { OutputChannel } from "vscode";
 import { DebugBridge } from "./debug-bridge";
+import { getSiblingInstances } from "./instance-registry";
 
 const SESSION_IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_SESSIONS = 10;
@@ -36,6 +37,7 @@ export class McpDebugServer {
   private sessions = new Map<string, ManagedSession>();
   private reaperInterval: ReturnType<typeof setInterval> | null = null;
   private maxBodyBytes: number;
+  private port = 0;
 
   constructor(
     private bridge: DebugBridge,
@@ -73,14 +75,41 @@ export class McpDebugServer {
 
     s.registerTool("get_launch_configs", {
       description:
-        "List available debug launch configurations from .vscode/launch.json",
-    }, async () => ok(await b.getLaunchConfigs()));
+        "List available debug launch configurations from .vscode/launch.json across all open IDE windows. Optionally filter by workspace folder name.",
+      inputSchema: {
+        folder: z
+          .string()
+          .optional()
+          .describe(
+            "Filter by workspace folder name. Omit to return configs from all folders across all windows."
+          ),
+      },
+    }, async ({ folder }) => {
+      const localConfigs = await b.getLaunchConfigs(folder);
+
+      // Aggregate configs from sibling IDE windows
+      const siblings = getSiblingInstances(this.port);
+      const remoteResults = await Promise.all(
+        siblings.map((s) =>
+          this.fetchJson<any[]>(s.port, "/api/launch-configs").then(
+            (configs) => {
+              if (!configs) return [];
+              return folder
+                ? configs.filter((c: any) => c.folder === folder)
+                : configs;
+            }
+          )
+        )
+      );
+
+      return ok([...localConfigs, ...remoteResults.flat()]);
+    });
 
     // --- Session Control ---
 
     s.registerTool("start_session", {
       description:
-        "Start a debug session. Optionally specify a launch configuration name.",
+        "Start a debug session. Optionally specify a launch configuration name and/or workspace folder. Automatically routes to the correct IDE window when multiple windows are open.",
       inputSchema: {
         configName: z
           .string()
@@ -88,8 +117,35 @@ export class McpDebugServer {
           .describe(
             "Name of the launch configuration (from launch.json). Omit to use the default."
           ),
+        folder: z
+          .string()
+          .optional()
+          .describe(
+            "Workspace folder name to scope the config search and launch to. Omit to search all folders."
+          ),
       },
-    }, async ({ configName }) => ok(await b.startSession(configName)));
+    }, async ({ configName, folder }) => {
+      // If folder is specified and not in this window, route to the correct sibling
+      if (folder && !b.hasWorkspaceFolder(folder)) {
+        const siblings = getSiblingInstances(this.port);
+        for (const sibling of siblings) {
+          if (sibling.workspaceFolders.some((f) => f.name === folder)) {
+            this.log.appendLine(
+              `[proxy] Routing start_session to port ${sibling.port} for folder "${folder}"`
+            );
+            const result = await this.fetchJson<any>(
+              sibling.port,
+              "/api/start-session",
+              "POST",
+              { configName, folder }
+            );
+            if (result) return ok(result);
+          }
+        }
+        // No sibling found — fall through to local (will return "folder not found")
+      }
+      return ok(await b.startSession(configName, folder));
+    });
 
     s.registerTool("stop_session", {
       description: "Stop a debug session",
@@ -327,9 +383,55 @@ export class McpDebugServer {
     });
   }
 
+  // ─── Cross-Instance Proxy ─────────────────────────────────
+
+  private fetchJson<T>(
+    port: number,
+    urlPath: string,
+    method = "GET",
+    body?: any
+  ): Promise<T | null> {
+    return new Promise((resolve) => {
+      const data = body ? JSON.stringify(body) : undefined;
+      const req = http.request(
+        {
+          hostname: "127.0.0.1",
+          port,
+          path: urlPath,
+          method,
+          headers: {
+            "Content-Type": "application/json",
+            ...(data ? { "Content-Length": String(Buffer.byteLength(data)) } : {}),
+          },
+          timeout: 2000,
+        },
+        (res) => {
+          let buf = "";
+          res.on("data", (chunk: string) => (buf += chunk));
+          res.on("end", () => {
+            try {
+              resolve(JSON.parse(buf) as T);
+            } catch {
+              resolve(null);
+            }
+          });
+        }
+      );
+      req.on("error", () => resolve(null));
+      req.on("timeout", () => {
+        req.destroy();
+        resolve(null);
+      });
+      if (data) req.write(data);
+      req.end();
+    });
+  }
+
   // ─── HTTP Server ───────────────────────────────────────────
 
   async start(port: number): Promise<void> {
+    this.port = port;
+
     // Reap idle sessions periodically
     this.reaperInterval = setInterval(() => this.reapIdleSessions(), 60_000);
 
@@ -350,6 +452,24 @@ export class McpDebugServer {
                 activeSessions: this.sessions.size,
               })
             );
+          } else if (
+            req.method === "GET" &&
+            url.pathname === "/api/launch-configs"
+          ) {
+            const configs = await this.bridge.getLaunchConfigs();
+            res.writeHead(200, { "Content-Type": "application/json" });
+            res.end(JSON.stringify(configs));
+          } else if (
+            req.method === "POST" &&
+            url.pathname === "/api/start-session"
+          ) {
+            const apiBody = await readBody(req, this.maxBodyBytes);
+            const result = await this.bridge.startSession(
+              apiBody?.configName,
+              apiBody?.folder
+            );
+            res.writeHead(200, { "Content-Type": "application/json" });
+            res.end(JSON.stringify(result));
           } else {
             res.writeHead(404);
             res.end(

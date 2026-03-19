@@ -1,8 +1,13 @@
 import * as vscode from "vscode";
 import { DebugBridge } from "./debug-bridge";
 import { McpDebugServer } from "./mcp-server";
+import {
+  registerInstance,
+  unregisterInstance,
+} from "./instance-registry";
 
 let mcpServer: McpDebugServer | undefined;
+let serverPort: number | undefined;
 let statusBarItem: vscode.StatusBarItem;
 
 export function activate(context: vscode.ExtensionContext) {
@@ -69,6 +74,15 @@ async function startServer(
         mcpServer = new McpDebugServer(bridge, log, { maxRequestBodyMB });
         await mcpServer.start(port);
 
+        serverPort = port;
+        registerInstance(
+          port,
+          vscode.workspace.workspaceFolders?.map((f) => ({
+            name: f.name,
+            fsPath: f.uri.fsPath,
+          })) ?? []
+        );
+
         statusBarItem.text = `$(debug) Debug Bridge :${port}`;
         statusBarItem.tooltip = `MCP Debug Bridge on port ${port} — click to stop`;
         statusBarItem.show();
@@ -117,6 +131,10 @@ async function startServer(
 async function stopServer(log: vscode.OutputChannel) {
   if (!mcpServer) return;
 
+  if (serverPort !== undefined) {
+    unregisterInstance(serverPort);
+    serverPort = undefined;
+  }
   await mcpServer.stop();
   mcpServer = undefined;
   statusBarItem.hide();
@@ -124,6 +142,10 @@ async function stopServer(log: vscode.OutputChannel) {
 }
 
 export async function deactivate() {
+  if (serverPort !== undefined) {
+    unregisterInstance(serverPort);
+    serverPort = undefined;
+  }
   if (mcpServer) {
     await mcpServer.stop();
     mcpServer = undefined;
