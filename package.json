@@ -47,6 +47,10 @@
         "title": "IDE Code Debug: Register with Claude Code"
       },
       {
+        "command": "ideCodeDebug.unregisterFromClaude",
+        "title": "IDE Code Debug: Unregister from Claude Code"
+      },
+      {
         "command": "ideCodeDebug.setFixedPort",
         "title": "IDE Code Debug: Set Fixed Port for Workspace"
       }
