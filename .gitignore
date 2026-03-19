@@ -3,3 +3,4 @@ dist/
 *.vsix
 .DS_Store
 RESEARCH.md
+DEMO_SCRIPT.md
