@@ -85,22 +85,22 @@ export class McpDebugServer {
           ),
       },
     }, async ({ folder }) => {
-      const localConfigs = await b.getLaunchConfigs(folder);
-
-      // Aggregate configs from sibling IDE windows
       const siblings = getSiblingInstances(this.port);
-      const remoteResults = await Promise.all(
-        siblings.map((s) =>
+
+      // Fetch local and remote configs in parallel
+      const [localConfigs, ...remoteResults] = await Promise.all([
+        b.getLaunchConfigs(folder),
+        ...siblings.map((s) =>
           this.fetchJson<any[]>(s.port, "/api/launch-configs").then(
             (configs) => {
-              if (!configs) return [];
+              if (!configs) return [] as any[];
               return folder
                 ? configs.filter((c: any) => c.folder === folder)
                 : configs;
             }
           )
-        )
-      );
+        ),
+      ]);
 
       return ok([...localConfigs, ...remoteResults.flat()]);
     });

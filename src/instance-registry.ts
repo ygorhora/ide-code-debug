@@ -16,6 +16,7 @@ export interface InstanceEntry {
 
 const REGISTRY_DIR = path.join(os.homedir(), ".ide-code-debug");
 const REGISTRY_FILE = path.join(REGISTRY_DIR, "instances.json");
+let registryDirCreated = false;
 
 function isProcessAlive(pid: number): boolean {
   try {
@@ -35,7 +36,10 @@ function readRegistry(): InstanceEntry[] {
 }
 
 function writeRegistry(entries: InstanceEntry[]): void {
-  fs.mkdirSync(REGISTRY_DIR, { recursive: true });
+  if (!registryDirCreated) {
+    fs.mkdirSync(REGISTRY_DIR, { recursive: true });
+    registryDirCreated = true;
+  }
   const tmp = `${REGISTRY_FILE}.${process.pid}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(entries, null, 2));
   fs.renameSync(tmp, REGISTRY_FILE);
