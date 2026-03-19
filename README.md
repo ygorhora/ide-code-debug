@@ -92,9 +92,11 @@ This automatically runs `claude mcp add` with the correct port for your project.
 
 > **Note:** This extension is built for [Claude Code](https://docs.anthropic.com/en/docs/claude-code). It uses the MCP Streamable HTTP transport, so it's compatible with any MCP client that supports it, but the setup commands and workflows are optimized for Claude Code.
 
+You can also register (or unregister) by clicking the **bug icon** in the status bar — it opens a menu with all available actions.
+
 ### 3. Reload your editor
 
-The extension auto-starts the MCP server on port 3100. You'll see `Debug Bridge :3100` in the status bar.
+The extension auto-starts the MCP server on port 3100. You'll see a **bug icon with the port number** (e.g. `:3100`) in the status bar. Click it to access a quick menu: stop/start the server, change port, register/unregister with Claude Code.
 
 ---
 
@@ -105,14 +107,16 @@ The extension auto-starts the MCP server on port 3100. You'll see `Debug Bridge 
 | Tool | Description |
 |------|-------------|
 | `get_state` | Current debugger state: active session, paused status, file/line, stop reason |
-| `get_launch_configs` | List available launch configurations from `.vscode/launch.json` |
+| `get_launch_configs` | List launch configurations from `.vscode/launch.json` across all open IDE windows. Optional `folder` filter. |
+| `list_sessions` | List all active debug sessions with their status |
 
 ### Session Control
 
 | Tool | Description |
 |------|-------------|
-| `start_session` | Start a debug session by launch config name |
+| `start_session` | Start a debug session by launch config name. Optional `folder` to target a specific workspace — automatically routes to the correct IDE window. |
 | `stop_session` | Stop the active debug session |
+| `restart_session` | Restart a debug session (stop + start with the same config) |
 
 ### Breakpoints
 
@@ -229,8 +233,8 @@ This saves the port in the project's `.vscode/settings.json` and registers it wi
 
 **How port resolution works on startup:**
 
-1. Reads `.mcp.json` in the workspace — if `ide-debug` is configured with a URL like `localhost:3200`, uses port `3200`
-2. Falls back to `ideCodeDebug.port` from workspace settings
+1. Uses `ideCodeDebug.port` from workspace settings (`.vscode/settings.json`) — explicit user choice takes priority
+2. Reads `.mcp.json` in the workspace — if `ide-debug` is configured with a URL like `localhost:3200`, uses port `3200`
 3. Falls back to the default (`3100`)
 
 If the preferred port is busy, the extension tries the next ports in the range (configurable via `portRange`). When you use "Set Fixed Port", `portRange` is set to `1` so the extension only tries that exact port and shows a clear error if it's taken.
@@ -252,15 +256,17 @@ When set, any tool call targeting a file outside these patterns will be rejected
 
 > **Tip:** Leave empty (default) for unrestricted access on single-user machines. Use glob patterns on shared machines or when you want to prevent the AI from reading files outside your project.
 
-### Commands (via Command Palette)
+### Commands (via Command Palette or status bar menu)
 
 | Command | Description |
 |---------|-------------|
 | **Register with Claude Code** | Runs `claude mcp add` with the current port for this project. Replaces any existing registration. |
+| **Unregister from Claude Code** | Runs `claude mcp remove` to remove the MCP entry from this project. |
 | **Set Fixed Port for Workspace** | Assigns a fixed port to this project (saved in `.vscode/settings.json`). Optionally restarts the server and registers with Claude Code. |
 | **Start MCP Server** | Manually start the server if auto-start is disabled. |
 | **Stop MCP Server** | Stop the server and free the port. |
-| **Toggle MCP Server** | Start or stop the server. Also available via the status bar icon. |
+
+All commands are also accessible by clicking the **bug icon** in the status bar, which shows a contextual quick menu.
 
 ---
 
