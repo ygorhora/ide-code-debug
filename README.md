@@ -8,7 +8,7 @@
 
 **Give your AI the power to debug like a human — visually, in real time, inside your IDE.**
 
-IDE Code Debug Bridge is a VS Code / Cursor extension that exposes the full debugger as MCP tools. An AI running in your terminal (Claude Code, or any MCP-compatible client) can set breakpoints, start debug sessions, step through code, inspect variables, evaluate expressions — all while you watch it happen live in your editor.
+IDE Code Debug Bridge is a VS Code / Cursor extension that exposes the full debugger as MCP tools for [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Claude can set breakpoints, start debug sessions, step through code, inspect variables, evaluate expressions — all while you watch it happen live in your editor.
 
 No print statements. No manual reproduction. You describe the bug, the AI investigates.
 
@@ -68,7 +68,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for diagrams, source structure, and debug
 ## Requirements
 
 - VS Code 1.85+ or Cursor
-- An MCP-compatible client (Claude Code, or any client supporting Streamable HTTP transport)
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (or any MCP client supporting Streamable HTTP transport)
 - A debug adapter for your language (Python: debugpy, Node.js: pwa-node, etc.)
 
 ---
@@ -82,18 +82,15 @@ Search for `ygorhora.ide-code-debug` in the Extensions panel, or install from:
 - **VS Code**: [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=ygorhora.ide-code-debug)
 - **Cursor**: [Open VSX Registry](https://open-vsx.org/extension/ygorhora/ide-code-debug)
 
-### 2. Configure the MCP client
+### 2. Register with Claude Code
 
-Add to your MCP config (e.g. `~/.claude/mcp.json` or project-level):
+Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and run:
 
-```json
-{
-  "ide-debug": {
-    "type": "http",
-    "url": "http://localhost:3100/mcp"
-  }
-}
-```
+> **IDE Code Debug: Register with Claude Code**
+
+This automatically runs `claude mcp add` with the correct port for your project. Done — Claude Code can now use the debugger.
+
+> **Note:** This extension is built for [Claude Code](https://docs.anthropic.com/en/docs/claude-code). It uses the MCP Streamable HTTP transport, so it's compatible with any MCP client that supports it, but the setup commands and workflows are optimized for Claude Code.
 
 ### 3. Reload your editor
 
@@ -218,22 +215,27 @@ The debugger only pauses when `order_id` is the specific value you're investigat
 
 ### Multiple editor windows
 
-Each editor window auto-starts its own MCP server. If port 3100 is already taken (by another Cursor/VS Code window, or another process), the extension automatically tries the next port in the range (3101, 3102, ...) up to `port + portRange - 1`. The status bar shows which port was actually bound.
+Each editor window runs its own MCP server on a separate port. When you work with multiple projects simultaneously, each one needs its own fixed port so Claude Code always connects to the right window.
 
-With default settings, you can run up to 10 editor windows simultaneously (ports 3100–3109), each with its own debug bridge.
+**Recommended setup for multi-window workflows:**
 
-To point your MCP client at a specific window, use the port shown in that window's status bar:
+1. Open each project in its own editor window
+2. In each window, run from the Command Palette:
+   > **IDE Code Debug: Set Fixed Port for Workspace**
+3. Assign a unique port to each project (e.g. `3100`, `3200`, `3300`)
+4. Choose **"Restart & Register with Claude"** when prompted
 
-```json
-{
-  "ide-debug": {
-    "type": "http",
-    "url": "http://localhost:3100/mcp"
-  }
-}
-```
+This saves the port in the project's `.vscode/settings.json` and registers it with Claude Code in one step. The next time you open that project, the extension will read the port from your `.mcp.json` and start on exactly that port.
 
-> **Tip:** If you always use a single window, set `portRange: 1` to skip scanning.
+**How port resolution works on startup:**
+
+1. Reads `.mcp.json` in the workspace — if `ide-debug` is configured with a URL like `localhost:3200`, uses port `3200`
+2. Falls back to `ideCodeDebug.port` from workspace settings
+3. Falls back to the default (`3100`)
+
+If the preferred port is busy, the extension tries the next ports in the range (configurable via `portRange`). When you use "Set Fixed Port", `portRange` is set to `1` so the extension only tries that exact port and shows a clear error if it's taken.
+
+**Cross-window aggregation:** Even if Claude Code connects to port 3100 (project A), calling `get_launch_configs` returns configs from **all** open windows. Calling `start_session` with a `folder` parameter automatically routes the request to the correct window.
 
 ### File path restriction
 
@@ -250,11 +252,15 @@ When set, any tool call targeting a file outside these patterns will be rejected
 
 > **Tip:** Leave empty (default) for unrestricted access on single-user machines. Use glob patterns on shared machines or when you want to prevent the AI from reading files outside your project.
 
-Commands (via Command Palette):
+### Commands (via Command Palette)
 
-- **IDE Code Debug: Start MCP Server**
-- **IDE Code Debug: Stop MCP Server**
-- **IDE Code Debug: Toggle MCP Server**
+| Command | Description |
+|---------|-------------|
+| **Register with Claude Code** | Runs `claude mcp add` with the current port for this project. Replaces any existing registration. |
+| **Set Fixed Port for Workspace** | Assigns a fixed port to this project (saved in `.vscode/settings.json`). Optionally restarts the server and registers with Claude Code. |
+| **Start MCP Server** | Manually start the server if auto-start is disabled. |
+| **Stop MCP Server** | Stop the server and free the port. |
+| **Toggle MCP Server** | Start or stop the server. Also available via the status bar icon. |
 
 ---
 
