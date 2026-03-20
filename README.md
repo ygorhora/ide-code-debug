@@ -258,6 +258,10 @@ When set, any tool call targeting a file outside these patterns will be rejected
 
 ### Commands (via Command Palette or status bar menu)
 
+<p align="center">
+  <img src="assets/command-palette.png" alt="Command Palette" width="700">
+</p>
+
 | Command | Description |
 |---------|-------------|
 | **Register with Claude Code** | Runs `claude mcp add` with the current port for this project. Replaces any existing registration. |
