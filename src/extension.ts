@@ -84,9 +84,16 @@ export function activate(context: vscode.ExtensionContext) {
         const terminal = vscode.window.createTerminal({
           name: "Claude MCP Setup",
         });
-        terminal.sendText(
-          `claude mcp remove --scope project ide-debug 2>/dev/null; claude mcp add --transport http --scope project ide-debug http://localhost:${serverPort}/mcp`
-        );
+        const url = `http://localhost:${serverPort}/mcp`;
+        if (process.platform === "win32") {
+          terminal.sendText(
+            `claude mcp remove --scope project ide-debug 2>nul & claude mcp add --transport http --scope project ide-debug ${url}`
+          );
+        } else {
+          terminal.sendText(
+            `claude mcp remove --scope project ide-debug 2>/dev/null; claude mcp add --transport http --scope project ide-debug ${url}`
+          );
+        }
         terminal.show();
       }
     ),

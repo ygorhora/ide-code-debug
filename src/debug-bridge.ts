@@ -110,7 +110,8 @@ export class DebugBridge extends EventEmitter {
   assertPathAllowed(file: string): void {
     if (!this.pathMatcher) return;
 
-    const resolved = path.resolve(file);
+    // Normalize to forward slashes so picomatch glob patterns work on Windows
+    const resolved = path.resolve(file).split(path.sep).join("/");
     if (!this.pathMatcher(resolved)) {
       throw new Error(
         `Access denied: "${resolved}" is outside the allowed paths. ` +

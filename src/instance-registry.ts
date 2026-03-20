@@ -1,3 +1,4 @@
+import * as child_process from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
@@ -20,6 +21,15 @@ let registryDirCreated = false;
 
 function isProcessAlive(pid: number): boolean {
   try {
+    if (process.platform === "win32") {
+      // On Windows, process.kill(pid, 0) doesn't reliably check liveness.
+      // Use tasklist to query by PID instead.
+      const result = child_process.execSync(
+        `tasklist /FI "PID eq ${pid}" /NH`,
+        { encoding: "utf-8", timeout: 2000 }
+      );
+      return result.includes(String(pid));
+    }
     process.kill(pid, 0);
     return true;
   } catch {
@@ -42,7 +52,13 @@ function writeRegistry(entries: InstanceEntry[]): void {
   }
   const tmp = `${REGISTRY_FILE}.${process.pid}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(entries, null, 2));
-  fs.renameSync(tmp, REGISTRY_FILE);
+  try {
+    fs.renameSync(tmp, REGISTRY_FILE);
+  } catch {
+    // On Windows, renameSync fails if target exists. Remove then rename.
+    try { fs.unlinkSync(REGISTRY_FILE); } catch { /* noop */ }
+    fs.renameSync(tmp, REGISTRY_FILE);
+  }
 }
 
 export function registerInstance(
