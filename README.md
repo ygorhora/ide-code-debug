@@ -14,6 +14,21 @@ No print statements. No manual reproduction. You describe the bug, the AI invest
 
 ---
 
+## Table of Contents
+
+- [Why this exists](#why-this-exists)
+- [See it in action](#see-it-in-action)
+- [How it works](#how-it-works)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [MCP Tools Reference](#mcp-tools-reference)
+- [Smart features](#smart-features)
+- [Configuration](#configuration)
+- [Security](#security)
+- [License](#license)
+
+---
+
 ## Why this exists
 
 Debugging today with AI follows a frustrating loop: you paste an error, the AI guesses a fix, you test it, it's wrong, you paste more context, repeat. The AI never actually *sees* what's happening at runtime.
@@ -36,9 +51,7 @@ The developer sees all of this happening in real time — breakpoints appear, th
 
 > **Prompt:** "Use the ide-debug MCP tools to debug why `/api/orders/1001` returns 404. Start a debug session, set breakpoints, inspect variables at runtime."
 
-<p align="center">
-  <video src="https://github.com/ygorhora/ide-code-debug/raw/main/assets/demo-debug-session.mp4" width="800" controls></video>
-</p>
+https://github.com/user-attachments/assets/332b21ca-da22-4714-a4ee-bf04f2cd18d5
 
 The AI sets breakpoints, starts the debug session, triggers a request, inspects variables at runtime — and finds the bug. All while you watch it happen live in the IDE.
 
