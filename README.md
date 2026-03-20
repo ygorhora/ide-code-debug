@@ -32,28 +32,15 @@ The developer sees all of this happening in real time — breakpoints appear, th
 
 ---
 
-## Real-world example
+## See it in action
 
-> **You:** "The endpoint `/api/orders/64063` returns 404 but the order exists in the database. Debug it."
+> **Prompt:** "Use the ide-debug MCP tools to debug why `/api/orders/1001` returns 404. Start a debug session, set breakpoints, inspect variables at runtime."
 
-The AI:
+<p align="center">
+  <video src="https://github.com/ygorhora/ide-code-debug/raw/main/assets/demo-debug-session.mp4" width="800" controls></video>
+</p>
 
-```
-1. find_code_line("routes.py", "get_order")          → line 294
-2. set_breakpoints("routes.py", [294])                → breakpoint set
-3. start_session("FastAPI Debug")                     → debug session running
-4. [triggers: curl localhost:8000/api/orders/64063]
-5. wait_for_stop()                                    → stopped at line 294
-6. get_variables()                                    → order_id = "64063" (string!)
-7. step_into()                                        → enters db.get_order()
-8. evaluate("type(order_id)")                         → <class 'str'>
-9. evaluate("self.collection.find_one({'id': 64063})")→ { ... } (found!)
-10. evaluate("self.collection.find_one({'id': '64063'})")→ None
-```
-
-> **AI:** "Found it. `order_id` arrives as a string `"64063"` from the URL path, but the database stores it as an integer. The query `{'id': '64063'}` returns nothing. You need `int(order_id)` before the database call."
-
-The entire investigation took seconds. No guessing. No back-and-forth. The AI saw the actual values at runtime and traced the exact point of failure.
+The AI sets breakpoints, starts the debug session, triggers a request, inspects variables at runtime — and finds the bug. All while you watch it happen live in the IDE.
 
 ---
 
