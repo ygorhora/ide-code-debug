@@ -100,7 +100,11 @@ You can also register (or unregister) by clicking the **bug icon** in the status
 
 ### 3. Reload your editor
 
-The extension auto-starts the MCP server on port 3100. You'll see a **bug icon with the port number** (e.g. `:3100`) in the status bar. Click it to access a quick menu: stop/start the server, change port, register/unregister with Claude Code.
+The extension auto-starts the MCP server on port 3100. You'll see the **port number in the status bar** — click it to access a quick menu: stop/start the server, change port, register/unregister with Claude Code.
+
+<p align="center">
+  <img src="assets/status-bar.png" alt="Status bar showing MCP port" width="400">
+</p>
 
 ---
 
