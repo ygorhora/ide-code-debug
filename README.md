@@ -88,6 +88,10 @@ Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and run:
 
 > **IDE Code Debug: Register with Claude Code**
 
+<p align="center">
+  <img src="assets/command-palette.png" alt="Command Palette" width="700">
+</p>
+
 This automatically runs `claude mcp add` with the correct port for your project. Done — Claude Code can now use the debugger.
 
 > **Note:** This extension is built for [Claude Code](https://docs.anthropic.com/en/docs/claude-code). It uses the MCP Streamable HTTP transport, so it's compatible with any MCP client that supports it, but the setup commands and workflows are optimized for Claude Code.
@@ -257,10 +261,6 @@ When set, any tool call targeting a file outside these patterns will be rejected
 > **Tip:** Leave empty (default) for unrestricted access on single-user machines. Use glob patterns on shared machines or when you want to prevent the AI from reading files outside your project.
 
 ### Commands (via Command Palette or status bar menu)
-
-<p align="center">
-  <img src="assets/command-palette.png" alt="Command Palette" width="700">
-</p>
 
 | Command | Description |
 |---------|-------------|
