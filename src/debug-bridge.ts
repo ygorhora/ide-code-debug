@@ -372,12 +372,56 @@ export class DebugBridge extends EventEmitter {
       launchFolder,
       config || ""
     );
+    if (!started) {
+      return { success: false, message: "Failed to start debug session" };
+    }
+
+    // Wait briefly to detect early termination (e.g., port conflict, crash on startup)
+    const earlyExit = await this.detectEarlyTermination(2000);
+    if (earlyExit) {
+      return {
+        success: false,
+        message:
+          "Debug session started but terminated immediately. " +
+          "The application may have failed to launch (e.g., port already in use). " +
+          "Check the Debug Console for details.",
+      };
+    }
+
     return {
-      success: started,
-      message: started
-        ? `Debug session started${configName ? `: ${configName}` : ""}`
-        : "Failed to start debug session",
+      success: true,
+      message: `Debug session started${configName ? `: ${configName}` : ""}`,
+      ...(config && {
+        launchConfig: {
+          args: config.args,
+          env: config.env,
+          program: config.program,
+          module: config.module,
+          cwd: config.cwd,
+        },
+      }),
     };
+  }
+
+  private detectEarlyTermination(timeoutMs: number): Promise<boolean> {
+    return new Promise((resolve) => {
+      const cleanup = () => {
+        clearTimeout(timer);
+        this.removeListener("terminated", onTerminated);
+      };
+
+      const timer = setTimeout(() => {
+        cleanup();
+        resolve(false); // still running after timeout
+      }, timeoutMs);
+
+      const onTerminated = () => {
+        cleanup();
+        resolve(true); // terminated early
+      };
+
+      this.on("terminated", onTerminated);
+    });
   }
 
   async stopSession(sessionId?: string): Promise<void> {
