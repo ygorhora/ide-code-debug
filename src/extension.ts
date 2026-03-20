@@ -175,7 +175,7 @@ function updateStatusBar(
 
   switch (state) {
     case "running":
-      statusBarItem.text = `$(bug) :${port}`;
+      statusBarItem.text = `$(bug) ${port}`;
       statusBarItem.tooltip = statusTooltip(
         `MCP server running on port **${port}**\n\nClick to stop`
       );
