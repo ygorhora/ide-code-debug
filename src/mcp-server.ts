@@ -583,7 +583,7 @@ export class McpDebugServer {
       return;
     }
 
-    res.writeHead(400, { "Content-Type": "application/json" });
+    res.writeHead(404, { "Content-Type": "application/json" });
     res.end(
       JSON.stringify({
         jsonrpc: "2.0",
